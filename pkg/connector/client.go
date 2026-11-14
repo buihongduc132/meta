@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
@@ -520,6 +521,25 @@ func (m *MetaClient) connectE2EE() error {
 		err = m.UserLogin.Save(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to save device ID to user login: %w", err)
+		}
+	}
+	if e2eeReregister.take(isNew, os.Getenv(reregisterEnv)) {
+		fbid := metaid.ParseUserLoginID(m.UserLogin.ID)
+		oldDevice := m.WADevice.ID.Device
+		log.Warn().Uint16("device_id", oldDevice).Msg("One-shot E2EE re-registration of existing device (same identity key)")
+		if err := m.Client.RegisterE2EE(ctx, fbid); err != nil {
+			log.Err(err).Msg("One-shot E2EE re-registration failed (not retrying)")
+		} else {
+			log.Warn().Uint16("old_device_id", oldDevice).Uint16("new_device_id", m.WADevice.ID.Device).Msg("One-shot E2EE re-registration done")
+			if m.WADevice.ID.Device != oldDevice {
+				m.LoginMeta.WADeviceID = m.WADevice.ID.Device
+				if err := m.WADevice.Save(ctx); err != nil {
+					return fmt.Errorf("failed to save re-registered device: %w", err)
+				}
+				if err := m.UserLogin.Save(ctx); err != nil {
+					return fmt.Errorf("failed to save re-registered device ID: %w", err)
+				}
+			}
 		}
 	}
 	m.E2EEClient, err = m.Client.PrepareE2EEClient()
