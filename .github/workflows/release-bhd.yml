@@ -29,4 +29,4 @@ jobs:
           files: |
             mautrix-meta-amd64
             mautrix-meta-amd64.sha256sum
-          body: "Patched mautrix/meta v0.2610.0 (base 3c16226). bhd1: keep WADeviceID on re-login. bhd2: + one-shot env-gated E2EE re-registration of the existing device (MAUTRIX_META_E2EE_REREGISTER=1)."
+          body: "Patched mautrix/meta v0.2610.0 (base 3c16226). bhd1: keep WADeviceID on re-login. bhd2: + one-shot env-gated E2EE re-registration (MAUTRIX_META_E2EE_REREGISTER=1). bhd3: + vendored whatsmeow with env-gated capture of failing prekey messages (WHATSMEOW_DUMP_FAILED_PKMSG_DIR)."
