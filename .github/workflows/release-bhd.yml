@@ -1,0 +1,32 @@
+# Build + publish an immutable patched release (bhd fork). Mirrors upstream
+# .gitlab-ci.yml: same builder image, static libolm link, same ldflags.
+name: release-bhd
+on:
+  push:
+    tags: ["v*-bhd*"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: dock.mau.dev/tulir/gomuks-build-docker:linux-amd64
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        env:
+          GOTOOLCHAIN: auto
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          MAUTRIX_VERSION=$(grep 'maunium.net/go/mautrix ' go.mod | awk '{ print $2 }')
+          LDF="-s -w -linkmode external -extldflags -static -X main.Tag=${GITHUB_REF_NAME} -X main.Commit=${GITHUB_SHA} -X 'main.BuildTime=$(date -Iseconds)' -X 'maunium.net/go/mautrix.GoModVersion=${MAUTRIX_VERSION}'"
+          go test ./pkg/metaid/
+          go build -ldflags "$LDF" -o mautrix-meta-amd64 ./cmd/mautrix-meta
+          ./mautrix-meta-amd64 --version
+          sha256sum mautrix-meta-amd64 | tee mautrix-meta-amd64.sha256sum
+      - name: release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mautrix-meta-amd64
+            mautrix-meta-amd64.sha256sum
+          body: "v0.2610.0 + keep WADeviceID on re-login (stops whatsmeow device stacking). Base: mautrix/meta v0.2610.0 (3c16226)."

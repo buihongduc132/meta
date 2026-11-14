@@ -61,6 +61,12 @@ func (m *UserLoginMetadata) CopyFrom(other any) {
 	if m.Platform.IsMessenger() && updated.Platform.IsMessenger() && m.HistoryDevice != nil {
 		updated.HistoryDevice = m.HistoryDevice
 	}
+	// Keep the existing whatsmeow device on re-login. Without this, every
+	// relogin zeroes WADeviceID, connectE2EE registers a new E2EE device and
+	// Meta keeps publishing the old ones, so peers encrypt to dead identities.
+	if m.Platform.IsMessenger() && updated.Platform.IsMessenger() && updated.WADeviceID == 0 {
+		updated.WADeviceID = m.WADeviceID
+	}
 	*m = updated
 }
 
